@@ -79,3 +79,4 @@ This project can be deployed to any static hosting service like:
 - Cloudflare Pages
 
 The build output will be in the `dist/` directory after running `npm run build`.
+# GitHub Pages Deployment
