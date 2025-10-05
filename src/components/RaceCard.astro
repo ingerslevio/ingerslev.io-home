@@ -1,0 +1,424 @@
+---
+import type { Race, Language } from "../types/race";
+
+interface Props {
+  race: Race;
+  language: Language;
+}
+
+const { race, language } = Astro.props;
+
+const formatDate = (date: Date, language: Language): string => {
+  return new Intl.DateTimeFormat(language === "da" ? "da-DK" : "en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+};
+
+const getCategoryColor = (category: Race["category"]): string => {
+  const colors = {
+    road: "#3B82F6",
+    trail: "#10B981",
+    track: "#8B5CF6",
+    ultra: "#F59E0B",
+    marathon: "#EF4444",
+    "half-marathon": "#EC4899",
+    "10k": "#06B6D4",
+    "5k": "#84CC16",
+  };
+  return colors[category] || "#6B7280";
+};
+
+const getStatusText = (status: Race["status"], language: Language): string => {
+  if (status === "upcoming") {
+    return language === "da" ? "Kommende" : "Upcoming";
+  }
+  return language === "da" ? "Afsluttet" : "Completed";
+};
+---
+
+<div class="race-card" data-race-id={race.id}>
+  <div class="race-header">
+    <div class="race-info">
+      <h3 class="race-name">{race.name[language]}</h3>
+      <p class="race-location">{race.location[language]}</p>
+      <p class="race-date">{formatDate(race.date, language)}</p>
+    </div>
+    <div class="race-status" data-status={race.status}>
+      {getStatusText(race.status, language)}
+    </div>
+  </div>
+
+  <div class="race-details">
+    <div class="race-meta">
+      <span
+        class="category-badge"
+        style={`background-color: ${getCategoryColor(race.category)}`}
+      >
+        {race.category.replace("-", " ").toUpperCase()}
+      </span>
+      <span class="distance">{race.distance}km</span>
+    </div>
+
+    <p class="race-description">{race.description[language]}</p>
+
+    {
+      race.status === "completed" && race.results && (
+        <div class="race-results">
+          <h4>{language === "da" ? "Resultater" : "Results"}</h4>
+          <div class="results-grid">
+            <div class="result-item">
+              <span class="result-label">
+                {language === "da" ? "Tid" : "Time"}
+              </span>
+              <span class="result-value">{race.results.time}</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">
+                {language === "da" ? "Placering" : "Position"}
+              </span>
+              <span class="result-value">
+                {race.results.position} / {race.results.totalParticipants}
+              </span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">
+                {language === "da" ? "Pace" : "Pace"}
+              </span>
+              <span class="result-value">{race.results.pace}</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    {
+      race.media &&
+        (race.media.photos?.length || race.media.videos?.length) && (
+          <div class="race-media">
+            <h4>{language === "da" ? "Medier" : "Media"}</h4>
+            <div class="media-grid">
+              {race.media.photos?.map((photo, index) => (
+                <div class="media-item photo">
+                  <img
+                    src={photo}
+                    alt={`${race.name[language]} photo ${index + 1}`}
+                  />
+                </div>
+              ))}
+              {race.media.videos?.map((video, index) => (
+                <div class="media-item video">
+                  <video controls>
+                    <source src={video} type="video/mp4" />
+                    {language === "da"
+                      ? "Din browser understøtter ikke video elementet."
+                      : "Your browser does not support the video element."}
+                  </video>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+    }
+
+    {
+      race.status === "completed" && (race.projectUrl || race.stravaUrl) && (
+        <div class="race-links">
+          {race.projectUrl && (
+            <a
+              href={race.projectUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="project-link"
+            >
+              {language === "da" ? "Se projekt" : "View Project"} →
+            </a>
+          )}
+          {race.stravaUrl && (
+            <a
+              href={race.stravaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="strava-link"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.599h4.172L10.463 0l-7.13 14.828h4.169" />
+              </svg>
+              {language === "da" ? "Se på Strava" : "View on Strava"}
+            </a>
+          )}
+        </div>
+      )
+    }
+  </div>
+</div>
+
+<script>
+  // Handle card clicks to navigate to race details
+  document.addEventListener("DOMContentLoaded", () => {
+    const raceCards = document.querySelectorAll(".race-card[data-race-id]");
+
+    raceCards.forEach((card) => {
+      card.addEventListener("click", (event) => {
+        // Don't navigate if clicking on links
+        if (event.target.closest("a")) {
+          return;
+        }
+
+        const raceId = card.getAttribute("data-race-id");
+        if (raceId) {
+          window.location.href = `/races/${raceId}`;
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  .race-card {
+    display: block;
+    background: #1a1a1a;
+    border-radius: 8px;
+    border: 1px solid #333333;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .race-card:hover {
+    border-color: #00d4ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.1);
+  }
+
+  .race-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .race-info {
+    flex: 1;
+  }
+
+  .race-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .race-location {
+    color: #a0a0a0;
+    font-size: 1rem;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .race-date {
+    color: #cccccc;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  .race-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .race-status[data-status="upcoming"] {
+    background-color: #1e3a8a;
+    color: #60a5fa;
+  }
+
+  .race-status[data-status="completed"] {
+    background-color: #064e3b;
+    color: #34d399;
+  }
+
+  .race-details {
+    margin-top: 1rem;
+  }
+
+  .race-meta {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+
+  .category-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .distance {
+    background-color: #2a2a2a;
+    color: #cccccc;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .race-description {
+    color: #cccccc;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .race-results {
+    background-color: #2a2a2a;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .race-results h4 {
+    margin: 0 0 0.75rem 0;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .result-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .result-label {
+    font-size: 0.75rem;
+    color: #a0a0a0;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .result-value {
+    font-size: 1rem;
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .race-media {
+    margin-bottom: 1rem;
+  }
+
+  .race-media h4 {
+    margin: 0 0 0.75rem 0;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .media-item {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .media-item img,
+  .media-item video {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+  }
+
+  .race-links {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #333333;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .project-link,
+  .strava-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #00d4ff;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    background-color: #2a2a2a;
+    border: 1px solid #444444;
+  }
+
+  .project-link:hover {
+    color: #0099cc;
+    background-color: #1a3a5c;
+    border-color: #00d4ff;
+  }
+
+  .strava-link {
+    color: #fc4c02;
+  }
+
+  .strava-link:hover {
+    color: #ff6b35;
+    background-color: #3a1a0a;
+    border-color: #fc4c02;
+  }
+
+  .strava-link svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .race-card {
+      padding: 1rem;
+    }
+
+    .race-header {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .race-status {
+      align-self: flex-start;
+    }
+
+    .results-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .media-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

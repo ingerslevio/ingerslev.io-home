@@ -1,0 +1,135 @@
+---
+import { readFileSync } from "fs";
+import { join } from "path";
+import { marked } from "marked";
+
+export interface Props {
+  raceId: string;
+  language: "en" | "da";
+}
+
+const { raceId, language } = Astro.props;
+
+// Try to load the actual markdown content
+let markdownContent = "";
+let htmlContent = "";
+
+try {
+  const markdownPath = join(
+    process.cwd(),
+    "src",
+    "content",
+    "races-content",
+    `${raceId}.${language}.md`
+  );
+  const fileContent = readFileSync(markdownPath, "utf-8");
+
+  // Remove frontmatter if present
+  const contentWithoutFrontmatter = fileContent.replace(
+    /^---[\s\S]*?---\n/,
+    ""
+  );
+  markdownContent = contentWithoutFrontmatter;
+
+  // Convert markdown to HTML
+  htmlContent = marked(markdownContent);
+} catch (error) {
+  console.error("Error loading race content:", error);
+}
+---
+
+{
+  htmlContent && (
+    <div class="race-content" data-language={language}>
+      <Fragment set:html={htmlContent} />
+    </div>
+  )
+}
+
+{
+  !htmlContent && (
+    <div class="race-content-empty">
+      <p>
+        No content available for this race in{" "}
+        {language === "en" ? "English" : "Danish"}.
+      </p>
+    </div>
+  )
+}
+
+<style>
+  .race-content {
+    line-height: 1.6;
+    color: #cccccc;
+  }
+
+  .race-content h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 1rem 0;
+  }
+
+  .race-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 1.5rem 0 0.75rem 0;
+  }
+
+  .race-content h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 1.25rem 0 0.5rem 0;
+  }
+
+  .race-content p {
+    margin: 0 0 1rem 0;
+    color: #cccccc;
+  }
+
+  .race-content ul,
+  .race-content ol {
+    margin: 0 0 1rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .race-content li {
+    margin: 0.25rem 0;
+    color: #cccccc;
+  }
+
+  .race-content strong {
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .race-content em {
+    color: #a0a0a0;
+    font-style: italic;
+  }
+
+  .race-content a {
+    color: #00d4ff;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .race-content a:hover {
+    color: #0099cc;
+  }
+
+  .race-content hr {
+    border: none;
+    border-top: 1px solid #333333;
+    margin: 2rem 0;
+  }
+
+  .race-content-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #a0a0a0;
+    font-style: italic;
+  }
+</style>

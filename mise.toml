@@ -1,0 +1,5 @@
+[tools]
+node = "24"
+
+[env]
+BACKEND_PORT = 8000
