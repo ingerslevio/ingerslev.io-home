@@ -3,7 +3,7 @@ import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://ingerslevio.github.io",
+  site: "https://new.ingerslev.io",
   base: "/",
   i18n: {
     locales: ["en", "da"],
