@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^6.3.7",
+    "@astrojs/mdx": "^4.3.6",
     "astro": "^5.14.1",
     "marked": "^16.3.0"
   }

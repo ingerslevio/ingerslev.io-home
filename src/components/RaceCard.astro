@@ -6,7 +6,8 @@ interface Props {
   language: Language;
 }
 
-const { race, language } = Astro.props;
+const { race } = Astro.props;
+const language = Astro.params.language as Language;
 
 const formatDate = (date: Date, language: Language): string => {
   return new Intl.DateTimeFormat(language === "da" ? "da-DK" : "en-US", {
@@ -38,15 +39,16 @@ const getStatusText = (status: Race["status"], language: Language): string => {
 };
 ---
 
-<div class="race-card" data-race-id={race.id}>
+<div
+  class="race-card"
+  data-race-id={race.id}
+  data-url={`/${language}/races/${race.id}`}
+>
   <div class="race-header">
     <div class="race-info">
       <h3 class="race-name">{race.name[language]}</h3>
       <p class="race-location">{race.location[language]}</p>
       <p class="race-date">{formatDate(race.date, language)}</p>
-    </div>
-    <div class="race-status" data-status={race.status}>
-      {getStatusText(race.status, language)}
     </div>
   </div>
 
@@ -59,6 +61,9 @@ const getStatusText = (status: Race["status"], language: Language): string => {
         {race.category.replace("-", " ").toUpperCase()}
       </span>
       <span class="distance">{race.distance}km</span>
+      <span class="race-status" data-status={race.status}>
+        {getStatusText(race.status, language)}
+      </span>
     </div>
 
     <p class="race-description">{race.description[language]}</p>
@@ -167,13 +172,14 @@ const getStatusText = (status: Race["status"], language: Language): string => {
     raceCards.forEach((card) => {
       card.addEventListener("click", (event) => {
         // Don't navigate if clicking on links
-        if (event.target.closest("a")) {
+        if (event.target instanceof HTMLElement && event.target.closest("a")) {
           return;
         }
 
         const raceId = card.getAttribute("data-race-id");
+        const url = card.getAttribute("data-url");
         if (raceId) {
-          window.location.href = `/races/${raceId}`;
+          window.location.href = url as string;
         }
       });
     });
@@ -183,9 +189,9 @@ const getStatusText = (status: Race["status"], language: Language): string => {
 <style>
   .race-card {
     display: block;
-    background: #1a1a1a;
+    background: #ffffff;
     border-radius: 8px;
-    border: 1px solid #333333;
+    border: 1px solid #cccccc;
     padding: 1.5rem;
     margin-bottom: 1rem;
     transition: all 0.2s ease;
@@ -214,7 +220,7 @@ const getStatusText = (status: Race["status"], language: Language): string => {
   .race-name {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #ffffff;
+    color: #000;
     margin: 0 0 0.25rem 0;
   }
 
@@ -225,7 +231,7 @@ const getStatusText = (status: Race["status"], language: Language): string => {
   }
 
   .race-date {
-    color: #cccccc;
+    color: #a0a0a0;
     font-size: 0.875rem;
     margin: 0;
   }
@@ -272,7 +278,7 @@ const getStatusText = (status: Race["status"], language: Language): string => {
 
   .distance {
     background-color: #2a2a2a;
-    color: #cccccc;
+    color: #eee;
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
     font-size: 0.75rem;
@@ -280,13 +286,13 @@ const getStatusText = (status: Race["status"], language: Language): string => {
   }
 
   .race-description {
-    color: #cccccc;
+    color: #333;
     line-height: 1.6;
     margin-bottom: 1rem;
   }
 
   .race-results {
-    background-color: #2a2a2a;
+    background-color: #eee;
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1rem;
@@ -294,7 +300,7 @@ const getStatusText = (status: Race["status"], language: Language): string => {
 
   .race-results h4 {
     margin: 0 0 0.75rem 0;
-    color: #ffffff;
+    color: #999;
     font-size: 1rem;
     font-weight: 600;
   }
@@ -321,7 +327,7 @@ const getStatusText = (status: Race["status"], language: Language): string => {
 
   .result-value {
     font-size: 1rem;
-    color: #ffffff;
+    color: #000;
     font-weight: 600;
   }
 
@@ -374,8 +380,8 @@ const getStatusText = (status: Race["status"], language: Language): string => {
     transition: color 0.2s ease;
     padding: 0.5rem 1rem;
     border-radius: 6px;
-    background-color: #2a2a2a;
-    border: 1px solid #444444;
+    background-color: #fff;
+    border: 1px solid #ccc;
   }
 
   .project-link:hover {
@@ -390,7 +396,6 @@ const getStatusText = (status: Race["status"], language: Language): string => {
 
   .strava-link:hover {
     color: #ff6b35;
-    background-color: #3a1a0a;
     border-color: #fc4c02;
   }
 

@@ -1,21 +1,25 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import LanguageSwitcher from "../../components/LanguageSwitcher.astro";
-import RaceContent from "../../components/RaceContent.astro";
-import { getAllRaces } from "../../data/races";
-import type { Language } from "../../types/race";
+import Layout from "../../../layouts/Layout.astro";
+import LanguageSwitcher from "../../../components/LanguageSwitcher.astro";
+import RaceContent from "../../../components/RaceContent.astro";
+import { getAllRaces } from "../../../data/races";
+import type { Language } from "../../../types/race";
+import { record } from "astro:schema";
 
 export async function getStaticPaths() {
   const races = await getAllRaces();
+  const languages: Language[] = ["en", "da"];
 
-  return races.map((race) => ({
-    params: { id: race.id },
-    props: { race },
-  }));
+  return languages.flatMap((language) => {
+    return races.map((race) => ({
+      params: { id: race.id, language },
+      props: { race, language },
+    }));
+  });
 }
 
 const { race } = Astro.props;
-const language: Language = "da";
+const { language } = Astro.params;
 
 const formatDate = (date: Date, language: Language): string => {
   return new Intl.DateTimeFormat(language === "da" ? "da-DK" : "en-US", {
@@ -54,7 +58,7 @@ const getStatusText = (
   <div class="race-page-container">
     <div class="race-page-header">
       <div class="breadcrumb">
-        <a href="/races" class="breadcrumb-link">
+        <a href=`/${language}/races` class="breadcrumb-link">
           {language === "da" ? "← Tilbage til løb" : "← Back to Races"}
         </a>
       </div>
@@ -159,10 +163,10 @@ const getStatusText = (
 
 <style>
   .race-page-container {
-    max-width: 1200px;
+    max-width: 800px;
     margin: 0 auto;
     padding: 2rem 1rem;
-    background-color: #0a0a0a;
+    background-color: transparent;
     min-height: 100vh;
   }
 
@@ -288,7 +292,7 @@ const getStatusText = (
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
-    background-color: #1a1a1a;
+    background-color: #fff;
     padding: 2rem;
     border-radius: 12px;
     border: 1px solid #333333;
@@ -302,7 +306,7 @@ const getStatusText = (
 
   .result-label {
     font-size: 0.75rem;
-    color: #a0a0a0;
+    color: #aaa;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -310,7 +314,7 @@ const getStatusText = (
 
   .result-value {
     font-size: 1.5rem;
-    color: #ffffff;
+    color: #000;
     font-weight: 700;
   }
 
@@ -321,7 +325,7 @@ const getStatusText = (
   .race-links-section h2 {
     font-size: 2rem;
     font-weight: 700;
-    color: #ffffff;
+    color: #00d4ff;
     margin: 0 0 1.5rem 0;
     padding-bottom: 0.5rem;
     border-bottom: 3px solid #00d4ff;
@@ -345,8 +349,8 @@ const getStatusText = (
     transition: all 0.2s ease;
     padding: 1rem 1.5rem;
     border-radius: 8px;
-    background-color: #1a1a1a;
-    border: 1px solid #333333;
+    background-color: #fff;
+    border: 1px solid #ccc;
     font-size: 1rem;
   }
 
@@ -363,7 +367,7 @@ const getStatusText = (
 
   .strava-link:hover {
     color: #ff6b35;
-    background-color: #3a1a0a;
+    background-color: #fff;
     border-color: #fc4c02;
     transform: translateY(-2px);
   }

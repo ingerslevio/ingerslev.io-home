@@ -1,31 +1,48 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import RaceCard from "../components/RaceCard.astro";
-import LanguageSwitcher from "../components/LanguageSwitcher.astro";
-import { getUpcomingRaces, getPastRaces } from "../data/races";
-import type { Language } from "../types/race";
+import Layout from "../../layouts/Layout.astro";
+import RaceCard from "../../components/RaceCard.astro";
+import LanguageSwitcher from "../../components/LanguageSwitcher.astro";
+import { getUpcomingRaces, getPastRaces } from "../../data/races";
+import type { Language } from "../../types/race";
+
+export async function getStaticPaths() {
+  return [
+    {
+      params: { language: "en" },
+      props: { language: "en" },
+    },
+    {
+      params: { language: "da" },
+      props: { language: "da" },
+    },
+  ];
+}
 
 const upcomingRaces = await getUpcomingRaces();
 const pastRaces = await getPastRaces();
-const language: Language = "da";
+const language: Language = Astro.params.language as Language;
 ---
 
 <Layout>
   <div class="races-container">
     <header class="races-header">
-      <h1>Løb</h1>
+      <h1>{language === "da" ? "Løb" : "Races"}</h1>
       <p class="subtitle">
-        Min løbende rejse gennem tidligere og fremtidige løb
+        {
+          language === "da"
+            ? "Min løbende rejse gennem tidligere og fremtidige løb"
+            : "My running journey through past and future races"
+        }
       </p>
 
-      <div class="language-switcher-container">
-        <LanguageSwitcher />
-      </div>
+      <LanguageSwitcher />
     </header>
 
     <div class="races-content">
       <section class="upcoming-races">
-        <h2 id="upcoming-title">Kommende Løb</h2>
+        <h2 id="upcoming-title">
+          {language === "da" ? "Kommende Løb" : "Upcoming Races"}
+        </h2>
         {
           upcomingRaces.length > 0 ? (
             <div class="races-grid">
@@ -35,14 +52,20 @@ const language: Language = "da";
             </div>
           ) : (
             <div class="empty-state">
-              <p id="upcoming-empty">Ingen kommende løb planlagt.</p>
+              <p id="upcoming-empty">
+                {language === "da"
+                  ? "Ingen kommende løb planlagt."
+                  : "No upcoming races scheduled."}
+              </p>
             </div>
           )
         }
       </section>
 
       <section class="past-races">
-        <h2 id="past-title">Tidligere Løb</h2>
+        <h2 id="past-title">
+          {language === "da" ? "Tidligere Løb" : "Past Races"}
+        </h2>
         {
           pastRaces.length > 0 ? (
             <div class="races-grid">
@@ -52,7 +75,11 @@ const language: Language = "da";
             </div>
           ) : (
             <div class="empty-state">
-              <p id="past-empty">Ingen tidligere løb registreret.</p>
+              <p id="past-empty">
+                {language === "da"
+                  ? "Ingen tidligere løb registreret."
+                  : "No past races recorded."}
+              </p>
             </div>
           )
         }
@@ -66,7 +93,7 @@ const language: Language = "da";
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem 1rem;
-    background-color: #0a0a0a;
+    background-color: transparent;
   }
 
   .races-header {
@@ -94,11 +121,6 @@ const language: Language = "da";
     margin-right: auto;
   }
 
-  .language-switcher-container {
-    display: flex;
-    justify-content: center;
-  }
-
   .races-content {
     display: flex;
     flex-direction: column;
@@ -108,7 +130,7 @@ const language: Language = "da";
   section h2 {
     font-size: 2rem;
     font-weight: 700;
-    color: #ffffff;
+    color: #00d4ff;
     margin: 0 0 1.5rem 0;
     padding-bottom: 0.5rem;
     border-bottom: 3px solid #00d4ff;
@@ -124,9 +146,9 @@ const language: Language = "da";
   .empty-state {
     text-align: center;
     padding: 3rem 1rem;
-    background-color: #1a1a1a;
+    background-color: #ffffff;
     border-radius: 12px;
-    border: 2px dashed #333333;
+    border: 2px dashed #cccccc;
   }
 
   .empty-state p {
@@ -167,23 +189,3 @@ const language: Language = "da";
     }
   }
 </style>
-
-<script>
-  // Simple language switching for Astro i18n
-  document.addEventListener("DOMContentLoaded", () => {
-    const languageSwitcher = document.querySelector(".language-switcher");
-    if (languageSwitcher) {
-      languageSwitcher.addEventListener("click", (event) => {
-        const target = event.target as HTMLElement;
-        if (target.classList.contains("lang-button")) {
-          const newLang = target.textContent?.trim().toLowerCase();
-          if (newLang === "da") {
-            window.location.href = "/races";
-          } else if (newLang === "en") {
-            window.location.href = "/en/races";
-          }
-        }
-      });
-    }
-  });
-</script>

@@ -1,0 +1,878 @@
+---
+import { callSafely } from "astro:actions";
+import { readdirSync } from "fs";
+import { join } from "path";
+
+export interface Props {
+  raceId?: string;
+  filter?: string;
+}
+
+const { raceId, filter } = Astro.props;
+
+// Get the race ID from the current page context if not provided
+const currentRaceId =
+  raceId ||
+  Astro.url.pathname
+    .split("/")
+    .pop()
+    ?.replace(/\.(da|en)\.mdx?$/, "") ||
+  "";
+
+// Read media files from the race folder
+let mediaFiles: string[] = [];
+try {
+  const raceFolder = join(process.cwd(), "public", "races", currentRaceId);
+  const files = readdirSync(raceFolder);
+
+  // Filter for image and video files
+  mediaFiles = files.filter((file) => {
+    const ext = file.toLowerCase().split(".").pop();
+    return ["jpg", "jpeg", "png", "gif", "webp", "mp4", "mov", "webm"].includes(
+      ext || ""
+    );
+  });
+
+  // Limit the number of items shown
+  if (filter) {
+    mediaFiles = mediaFiles.filter((x) => x.startsWith(filter));
+  }
+} catch (error) {
+  console.error("Error reading race media folder:", error);
+}
+
+const isVideo = (filename: string): boolean => {
+  const ext = filename.toLowerCase().split(".").pop();
+  return ["mp4", "mov", "webm"].includes(ext || "");
+};
+---
+
+{
+  mediaFiles.length > 0 && (
+    <div class="gallery">
+      <div class="gallery-grid">
+        {mediaFiles.map((file, index) => {
+          const mediaPath = `/races/${currentRaceId}/${file}`;
+          const isVideoFile = isVideo(file);
+
+          return (
+            <div class="gallery-item" data-index={index}>
+              {isVideoFile ? (
+                <video
+                  class="gallery-thumbnail"
+                  src={mediaPath}
+                  preload="metadata"
+                  muted
+                  playsinline
+                />
+              ) : (
+                <img
+                  class="gallery-thumbnail"
+                  src={mediaPath}
+                  alt={`Race photo ${index + 1}`}
+                  loading="lazy"
+                />
+              )}
+              <div class="gallery-overlay">
+                {isVideoFile ? (
+                  <svg
+                    class="play-icon"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                ) : (
+                  <svg
+                    class="expand-icon"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                  </svg>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )
+}
+
+<!-- Full-screen modal -->
+<div class="gallery-modal" id="gallery-modal">
+  <div class="modal-content">
+    <button class="modal-close" id="modal-close">&times;</button>
+    <button class="modal-prev" id="modal-prev">‹</button>
+    <button class="modal-next" id="modal-next">›</button>
+
+    <div class="modal-media" id="modal-media">
+      <!-- Media content will be inserted here -->
+    </div>
+
+    <div class="modal-info">
+      <span class="modal-counter" id="modal-counter">1 / 1</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .gallery {
+    margin: 2rem 0;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .gallery-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.3s ease;
+  }
+
+  .gallery-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Hover effect for video thumbnails */
+  .gallery-item:hover .gallery-thumbnail {
+    transform: scale(1.02);
+  }
+
+  .gallery-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .gallery-thumbnail[src$=".mov"],
+  .gallery-thumbnail[src$=".mp4"],
+  .gallery-thumbnail[src$=".webm"] {
+    cursor: pointer;
+  }
+
+  /* Playing video indicator */
+  .gallery-item.playing {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+    transform: scale(1.02);
+  }
+
+  .gallery-item.playing .gallery-overlay {
+    opacity: 0.3;
+    background: rgba(0, 212, 255, 0.3);
+  }
+
+  /* Smooth transitions for video states */
+  .gallery-thumbnail {
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+  }
+
+  .gallery-item {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.3s ease;
+  }
+
+  .gallery-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .gallery-item:hover .gallery-overlay {
+    opacity: 1;
+  }
+
+  .play-icon,
+  .expand-icon {
+    width: 32px;
+    height: 32px;
+    color: white;
+  }
+
+  .gallery-more {
+    text-align: center;
+  }
+
+  .show-all-btn {
+    background: #00d4ff;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .show-all-btn:hover {
+    background: #0099cc;
+  }
+
+  /* Modal styles */
+  .gallery-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gallery-modal.active {
+    display: flex;
+  }
+
+  .modal-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    z-index: 1001;
+  }
+
+  .modal-prev,
+  .modal-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 1001;
+    transition: background-color 0.2s ease;
+  }
+
+  .modal-prev:hover,
+  .modal-next:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .modal-prev {
+    left: -60px;
+  }
+
+  .modal-next {
+    right: -60px;
+  }
+
+  .modal-media {
+    max-width: 100%;
+    max-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-media img,
+  .modal-media video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .modal-info {
+    margin-top: 1rem;
+    color: white;
+    text-align: center;
+  }
+
+  .modal-counter {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .gallery-grid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .modal-prev,
+    .modal-next {
+      width: 40px;
+      height: 40px;
+      font-size: 1.5rem;
+    }
+
+    .modal-prev {
+      left: -50px;
+    }
+
+    .modal-next {
+      right: -50px;
+    }
+
+    .modal-close {
+      top: -35px;
+      font-size: 1.5rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .gallery-grid {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .modal-prev,
+    .modal-next {
+      width: 35px;
+      height: 35px;
+      font-size: 1.2rem;
+    }
+
+    .modal-prev {
+      left: -40px;
+    }
+
+    .modal-next {
+      right: -40px;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById("gallery-modal") as HTMLElement;
+    const modalClose = document.getElementById("modal-close") as HTMLElement;
+    const modalPrev = document.getElementById("modal-prev") as HTMLElement;
+    const modalNext = document.getElementById("modal-next") as HTMLElement;
+    const modalMedia = document.getElementById("modal-media") as HTMLElement;
+    const modalCounter = document.getElementById(
+      "modal-counter"
+    ) as HTMLElement;
+
+    let currentIndex = 0;
+    let allMediaFiles: string[] = [];
+
+    // Get all media files for a specific gallery
+    function getAllMediaFiles(galleryElement: HTMLElement): string[] {
+      const galleryItems = galleryElement.querySelectorAll(".gallery-item");
+      const files: string[] = [];
+
+      galleryItems.forEach((item) => {
+        const img = item.querySelector("img") as HTMLImageElement;
+        const video = item.querySelector("video") as HTMLVideoElement;
+        if (img) {
+          files.push(img.src);
+        } else if (video) {
+          files.push(video.src);
+        }
+      });
+
+      return files;
+    }
+
+    // Open modal with specific media
+    function openModal(index: number, galleryElement: HTMLElement) {
+      allMediaFiles = getAllMediaFiles(galleryElement);
+      currentIndex = index;
+
+      if (allMediaFiles.length === 0) return;
+
+      updateModalContent();
+      modal.classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+
+    // Update modal content
+    function updateModalContent() {
+      if (allMediaFiles.length === 0) return;
+
+      const currentFile = allMediaFiles[currentIndex];
+      const isVideo = currentFile.toLowerCase().match(/\.(mp4|mov|webm)$/);
+
+      modalMedia.innerHTML = "";
+
+      if (isVideo) {
+        const video = document.createElement("video");
+        video.src = currentFile;
+        video.controls = true;
+        video.autoplay = true;
+        video.style.maxWidth = "100%";
+        video.style.maxHeight = "100%";
+        modalMedia.appendChild(video);
+      } else {
+        const img = document.createElement("img");
+        img.src = currentFile;
+        img.style.maxWidth = "100%";
+        img.style.maxHeight = "100%";
+        img.style.objectFit = "contain";
+        modalMedia.appendChild(img);
+      }
+
+      modalCounter.textContent = `${currentIndex + 1} / ${allMediaFiles.length}`;
+
+      // Show/hide navigation buttons
+      modalPrev.style.display = allMediaFiles.length > 1 ? "block" : "none";
+      modalNext.style.display = allMediaFiles.length > 1 ? "block" : "none";
+    }
+
+    // Close modal
+    function closeModal() {
+      modal.classList.remove("active");
+      document.body.style.overflow = "";
+    }
+
+    // Navigate to previous media
+    function prevMedia() {
+      if (allMediaFiles.length === 0) return;
+      currentIndex =
+        (currentIndex - 1 + allMediaFiles.length) % allMediaFiles.length;
+      updateModalContent();
+    }
+
+    // Navigate to next media
+    function nextMedia() {
+      if (allMediaFiles.length === 0) return;
+      currentIndex = (currentIndex + 1) % allMediaFiles.length;
+      updateModalContent();
+    }
+
+    // Event listeners
+    modalClose.addEventListener("click", closeModal);
+    modalPrev.addEventListener("click", prevMedia);
+    modalNext.addEventListener("click", nextMedia);
+
+    // Close modal when clicking outside
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", (e) => {
+      if (!modal.classList.contains("active")) return;
+
+      switch (e.key) {
+        case "Escape":
+          closeModal();
+          break;
+        case "ArrowLeft":
+          prevMedia();
+          break;
+        case "ArrowRight":
+          nextMedia();
+          break;
+      }
+    });
+
+    // Gallery item click handlers
+    document.addEventListener("click", (e) => {
+      const galleryItem = (e.target as HTMLElement).closest(".gallery-item");
+      if (galleryItem) {
+        const index = parseInt(galleryItem.getAttribute("data-index") || "0");
+        const galleryElement = galleryItem.closest(".gallery") as HTMLElement;
+        if (galleryElement) {
+          openModal(index, galleryElement);
+        }
+      }
+    });
+
+    // Mouse hover handlers for video control
+    document.addEventListener("mouseover", (e) => {
+      const galleryItem = (e.target as HTMLElement).closest(".gallery-item");
+      if (galleryItem) {
+        const video = galleryItem.querySelector("video") as HTMLVideoElement;
+        if (video) {
+          // Pause all other videos
+          const allVideos = getAllVideos();
+          allVideos.forEach((v) => {
+            if (v !== video) {
+              v.pause();
+              v.currentTime = 0;
+
+              // Remove visual indicator from other videos
+              const otherGalleryItem = v.closest(
+                ".gallery-item"
+              ) as HTMLElement;
+              if (otherGalleryItem) {
+                otherGalleryItem.classList.remove("playing");
+              }
+            }
+          });
+
+          // Pause sequential playback
+          isSequentialPlaybackActive = false;
+          if (videoPlayTimeout) {
+            clearTimeout(videoPlayTimeout);
+            videoPlayTimeout = null;
+          }
+
+          // Play the hovered video
+          currentPlayingVideo = video;
+          video.play().catch(() => {
+            // Ignore autoplay errors
+          });
+
+          // Add visual indicator
+          galleryItem.classList.add("playing");
+        }
+      }
+    });
+
+    // Mouse leave handlers
+    document.addEventListener("mouseout", (e) => {
+      const galleryItem = (e.target as HTMLElement).closest(".gallery-item");
+      if (galleryItem) {
+        const video = galleryItem.querySelector("video") as HTMLVideoElement;
+        if (video && currentPlayingVideo === video) {
+          // Pause the video when mouse leaves
+          video.pause();
+
+          // Remove visual indicator
+          galleryItem.classList.remove("playing");
+
+          // Reset current playing video
+          currentPlayingVideo = null;
+
+          // Resume sequential playback after a short delay
+          setTimeout(() => {
+            if (!currentPlayingVideo) {
+              const firstVisibleVideo = getFirstVisibleVideo();
+              if (firstVisibleVideo) {
+                isSequentialPlaybackActive = true;
+                currentPlayingVideo = firstVisibleVideo;
+
+                // Add visual indicator
+                const firstGalleryItem = firstVisibleVideo.closest(
+                  ".gallery-item"
+                ) as HTMLElement;
+                if (firstGalleryItem) {
+                  firstGalleryItem.classList.add("playing");
+                }
+
+                firstVisibleVideo.play().catch(() => {
+                  // Ignore autoplay errors
+                });
+              }
+            }
+          }, 1000); // 1 second delay before resuming sequential playback
+        }
+      }
+    });
+
+    // Sequential video autoplay system
+    let currentPlayingVideo: HTMLVideoElement | null = null;
+    let videoPlayTimeout: NodeJS.Timeout | null = null;
+    let isSequentialPlaybackActive = false;
+
+    // Get all video elements in order from all galleries
+    function getAllVideos(): HTMLVideoElement[] {
+      const videos: HTMLVideoElement[] = [];
+
+      // Get all galleries in document order
+      const galleries = document.querySelectorAll(".gallery");
+
+      galleries.forEach((gallery) => {
+        const galleryVideos = gallery.querySelectorAll(
+          ".gallery-thumbnail[src$='.mov'], .gallery-thumbnail[src$='.mp4'], .gallery-thumbnail[src$='.webm']"
+        ) as NodeListOf<HTMLVideoElement>;
+
+        // Add videos in their DOM order
+        Array.from(galleryVideos).forEach((video) => {
+          videos.push(video);
+        });
+      });
+
+      return videos;
+    }
+
+    // Get the first visible video
+    function getFirstVisibleVideo(): HTMLVideoElement | null {
+      const allVideos = getAllVideos();
+
+      for (const video of allVideos) {
+        const rect = video.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+
+        if (isVisible) {
+          return video;
+        }
+      }
+
+      return null;
+    }
+
+    // Play next video in sequence
+    function playNextVideo(currentVideo: HTMLVideoElement) {
+      const allVideos = getAllVideos();
+      const currentIndex = allVideos.indexOf(currentVideo);
+
+      console.log(
+        "Current video index:",
+        currentIndex,
+        "Total videos:",
+        allVideos.length
+      );
+
+      if (currentIndex === -1) return;
+
+      // Find next video in sequence
+      let nextVideo: HTMLVideoElement | null = null;
+      for (let i = currentIndex + 1; i < allVideos.length; i++) {
+        if (allVideos[i].src !== currentVideo.src) {
+          nextVideo = allVideos[i];
+          break;
+        }
+      }
+
+      console.log("Next video found:", nextVideo ? nextVideo.src : "none");
+
+      if (nextVideo && isSequentialPlaybackActive) {
+        // Scroll next video into view smoothly
+        nextVideo.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "center",
+        });
+
+        // Play next video after a short delay
+        videoPlayTimeout = setTimeout(() => {
+          if (isSequentialPlaybackActive && nextVideo) {
+            console.log("Starting next video:", nextVideo.src);
+            nextVideo.play().catch(() => {
+              // Ignore autoplay errors
+            });
+          }
+        }, 2000); // 2 second delay between videos
+      } else {
+        console.log("No next video or sequential playback not active");
+      }
+    }
+
+    // Enhanced intersection observer for sequential playback
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target as HTMLVideoElement;
+
+          if (entry.isIntersecting) {
+            // Only start playing if this is the first visible video or if sequential playback is active
+            const allVideos = getAllVideos();
+            const firstVisibleVideo = getFirstVisibleVideo();
+
+            // Check if this is the first visible video or if we're in sequential mode
+            const shouldPlay =
+              !currentPlayingVideo ||
+              currentPlayingVideo === video ||
+              (isSequentialPlaybackActive && firstVisibleVideo === video);
+
+            if (shouldPlay) {
+              // Clear any existing timeout
+              if (videoPlayTimeout) {
+                clearTimeout(videoPlayTimeout);
+                videoPlayTimeout = null;
+              }
+
+              // Stop current playing video if it's different
+              if (currentPlayingVideo && currentPlayingVideo !== video) {
+                currentPlayingVideo.pause();
+                currentPlayingVideo.currentTime = 0;
+
+                // Remove visual indicator from previous video
+                const prevGalleryItem = currentPlayingVideo.closest(
+                  ".gallery-item"
+                ) as HTMLElement;
+                if (prevGalleryItem) {
+                  prevGalleryItem.classList.remove("playing");
+                }
+              }
+
+              // Set as current playing video
+              currentPlayingVideo = video;
+              isSequentialPlaybackActive = true;
+
+              // Add visual indicator
+              const galleryItem = video.closest(".gallery-item") as HTMLElement;
+              if (galleryItem) {
+                galleryItem.classList.add("playing");
+              }
+
+              // Play the video
+              video.play().catch(() => {
+                // Ignore autoplay errors (browser restrictions)
+              });
+
+              // Set up next video playback
+              video.addEventListener(
+                "ended",
+                () => {
+                  console.log("Video ended:", video.src);
+                  if (isSequentialPlaybackActive) {
+                    console.log("Playing next video...");
+                    playNextVideo(video);
+                  }
+                },
+                { once: true }
+              );
+            }
+          } else {
+            // Video is out of view
+            if (currentPlayingVideo === video) {
+              video.pause();
+
+              // Remove visual indicator
+              const galleryItem = video.closest(".gallery-item") as HTMLElement;
+              if (galleryItem) {
+                galleryItem.classList.remove("playing");
+              }
+
+              currentPlayingVideo = null;
+              isSequentialPlaybackActive = false;
+
+              if (videoPlayTimeout) {
+                clearTimeout(videoPlayTimeout);
+                videoPlayTimeout = null;
+              }
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.6, // Video needs to be 60% visible
+        rootMargin: "0px 0px -10% 0px", // Start playing when video is 10% from bottom
+      }
+    );
+
+    // Initialize video playback
+    function initializeVideoPlayback() {
+      const firstVisibleVideo = getFirstVisibleVideo();
+
+      if (firstVisibleVideo && !currentPlayingVideo) {
+        isSequentialPlaybackActive = true;
+        currentPlayingVideo = firstVisibleVideo;
+
+        // Add visual indicator
+        const galleryItem = firstVisibleVideo.closest(
+          ".gallery-item"
+        ) as HTMLElement;
+        if (galleryItem) {
+          galleryItem.classList.add("playing");
+        }
+
+        firstVisibleVideo.play().catch(() => {
+          // Ignore autoplay errors
+        });
+      }
+    }
+
+    // Observe all video thumbnails
+    document
+      .querySelectorAll(
+        ".gallery-thumbnail[src$='.mov'], .gallery-thumbnail[src$='.mp4'], .gallery-thumbnail[src$='.webm']"
+      )
+      .forEach((video) => {
+        // Ensure videos are muted for autoplay
+        video.muted = true;
+        video.playsInline = true;
+        observer.observe(video);
+      });
+
+    // Initialize playback after a short delay to ensure all videos are loaded
+    setTimeout(initializeVideoPlayback, 1000);
+
+    // Pause all videos when modal is opened
+    const originalOpenModal = openModal;
+    openModal = function (index: number, galleryElement: HTMLElement) {
+      // Pause sequential playback
+      isSequentialPlaybackActive = false;
+      if (currentPlayingVideo) {
+        currentPlayingVideo.pause();
+
+        // Remove visual indicator
+        const galleryItem = currentPlayingVideo.closest(
+          ".gallery-item"
+        ) as HTMLElement;
+        if (galleryItem) {
+          galleryItem.classList.remove("playing");
+        }
+
+        currentPlayingVideo = null;
+      }
+      if (videoPlayTimeout) {
+        clearTimeout(videoPlayTimeout);
+        videoPlayTimeout = null;
+      }
+
+      // Call original function
+      originalOpenModal(index, galleryElement);
+    };
+
+    // Resume sequential playback when modal is closed
+    const originalCloseModal = closeModal;
+    closeModal = function () {
+      // Call original function
+      originalCloseModal();
+
+      // Resume sequential playback after a short delay
+      setTimeout(() => {
+        const firstVisibleVideo = getFirstVisibleVideo();
+
+        if (firstVisibleVideo) {
+          isSequentialPlaybackActive = true;
+          currentPlayingVideo = firstVisibleVideo;
+
+          // Add visual indicator
+          const galleryItem = firstVisibleVideo.closest(
+            ".gallery-item"
+          ) as HTMLElement;
+          if (galleryItem) {
+            galleryItem.classList.add("playing");
+          }
+
+          firstVisibleVideo.play().catch(() => {
+            // Ignore autoplay errors
+          });
+        }
+      }, 500);
+    };
+  });
+</script>

@@ -2,31 +2,36 @@
 import type { Language } from "../types/race";
 
 // Detect current locale from URL
-const currentPath = Astro.url.pathname;
-const isEnglish = currentPath.startsWith("/en/");
-const currentLanguage: Language = isEnglish ? "en" : "da";
+const language: Language = Astro.params.language as Language;
 ---
 
-<div class="language-switcher">
-  <button
-    class={`lang-button ${currentLanguage === "en" ? "active" : ""}`}
-    data-lang="en"
-  >
-    EN
-  </button>
-  <button
-    class={`lang-button ${currentLanguage === "da" ? "active" : ""}`}
-    data-lang="da"
-  >
-    DA
-  </button>
+<div class="language-switcher-container">
+  <div class="language-switcher">
+    <button
+      class={`lang-button ${language === "en" ? "active" : ""}`}
+      data-lang="en"
+    >
+      EN
+    </button>
+    <button
+      class={`lang-button ${language === "da" ? "active" : ""}`}
+      data-lang="da"
+    >
+      DA
+    </button>
+  </div>
 </div>
 
 <style>
+  .language-switcher-container {
+    display: flex;
+    justify-content: center;
+  }
   .language-switcher {
     display: flex;
     gap: 0.25rem;
-    background-color: #2a2a2a;
+    background-color: #fff;
+    border: 1px solid #cccccc;
     padding: 0.25rem;
     border-radius: 8px;
     margin-bottom: 2rem;
@@ -50,8 +55,34 @@ const currentLanguage: Language = isEnglish ? "en" : "da";
   }
 
   .lang-button.active {
-    background-color: #1a1a1a;
+    background-color: #aaa;
     color: #ffffff;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   }
 </style>
+
+<script>
+  // Simple language switching for Astro i18n
+  document.addEventListener("DOMContentLoaded", () => {
+    const languageSwitcher = document.querySelector(".language-switcher");
+    if (languageSwitcher) {
+      languageSwitcher.addEventListener("click", (event) => {
+        const target = event.target as HTMLElement;
+        if (target.classList.contains("lang-button")) {
+          const newLang = target.textContent?.trim().toLowerCase();
+          if (newLang === "da") {
+            window.location.href = window.location.pathname.replace(
+              "/en/",
+              "/da/"
+            );
+          } else if (newLang === "en") {
+            window.location.href = window.location.pathname.replace(
+              "/da/",
+              "/en/"
+            );
+          }
+        }
+      });
+    }
+  });
+</script>
