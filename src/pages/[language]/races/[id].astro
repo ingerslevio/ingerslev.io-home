@@ -81,7 +81,12 @@ const getStatusText = (
           >
             {race.category.replace("-", " ").toUpperCase()}
           </span>
-          <span class="distance">{race.distance}km</span>
+          {race.distance && <span class="distance">{race.distance}km</span>}
+          {
+            race.timeInHours && (
+              <span class="time-in-hours">{race.timeInHours} hours</span>
+            )
+          }
           <span class="race-status" data-status={race.status}>
             {getStatusText(race.status, language)}
           </span>
@@ -261,7 +266,8 @@ const getStatusText = (
     letter-spacing: 0.05em;
   }
 
-  .distance {
+  .distance,
+  .time-in-hours {
     background-color: #2a2a2a;
     color: #cccccc;
     padding: 0.5rem 1rem;

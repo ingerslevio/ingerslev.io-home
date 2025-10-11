@@ -70,16 +70,26 @@ const language: Language = Astro.params.language as Language;
         const target = event.target as HTMLElement;
         if (target.classList.contains("lang-button")) {
           const newLang = target.textContent?.trim().toLowerCase();
+          const currentPath = window.location.pathname;
+
           if (newLang === "da") {
-            window.location.href = window.location.pathname.replace(
-              "/en/",
-              "/da/"
-            );
+            // Switch to Danish
+            if (currentPath.startsWith("/en/")) {
+              window.location.href = currentPath.replace("/en/", "/da/");
+            } else if (currentPath === "/mentions") {
+              window.location.href = "/da/mentions";
+            } else {
+              window.location.href = "/da" + currentPath;
+            }
           } else if (newLang === "en") {
-            window.location.href = window.location.pathname.replace(
-              "/da/",
-              "/en/"
-            );
+            // Switch to English
+            if (currentPath.startsWith("/da/")) {
+              window.location.href = currentPath.replace("/da/", "/en/");
+            } else if (currentPath === "/mentions") {
+              window.location.href = "/en/mentions";
+            } else {
+              window.location.href = "/en" + currentPath;
+            }
           }
         }
       });

@@ -16,10 +16,9 @@ export const raceData: Race = {
     da: "Verdensmesterskaberne i 24 timer",
   },
   category: Category.Ultra,
-  time: 24,
+  timeInHours: 24,
   status: Status.Upcoming,
   // results: {
   //   totalParticipants: 380,
   // },
-  stravaUrl: "https://www.strava.com/activities/15721472352",
 };

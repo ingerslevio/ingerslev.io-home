@@ -1,0 +1,7 @@
+---
+import { getLocalizedRedirectUrl } from "../utils/language-detection";
+
+// Redirect to user's preferred language or fallback to English
+const redirectUrl = getLocalizedRedirectUrl(Astro.request, "/races");
+return Astro.redirect(redirectUrl);
+---

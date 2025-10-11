@@ -38,7 +38,8 @@ export interface Race {
     | Category.HalfMarathon
     | Category.Distance10k
     | Category.Distance5k;
-  distance: number; // in kilometers
+  distance?: number; // in kilometers
+  timeInHours?: number;
   status: Status;
   results?: {
     time?: string;

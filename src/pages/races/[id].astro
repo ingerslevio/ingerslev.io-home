@@ -1,0 +1,25 @@
+---
+import { getLocalizedRedirectUrl } from "../../utils/language-detection";
+
+import { getAllRaces } from "../../data/races";
+import type { Language } from "../../types/race";
+
+export async function getStaticPaths() {
+  const races = await getAllRaces();
+  const languages: Language[] = ["en", "da"];
+
+  return languages.flatMap((language) => {
+    return races.map((race) => ({
+      params: { id: race.id, language },
+      props: { race, language },
+    }));
+  });
+}
+
+// Get the race ID from the URL
+const { id } = Astro.params;
+
+// Redirect to user's preferred language or fallback to English
+const redirectUrl = getLocalizedRedirectUrl(Astro.request, `/races/${id}`);
+return Astro.redirect(redirectUrl);
+---
